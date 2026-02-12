@@ -120,28 +120,36 @@ const App = () => {
           <View style={styles.container}>
             {
               connectedDevice ? (
-                clearance === 1 ? (
                 <>
-                  
                   <LockControl
                     deviceRef={connectedDeviceRef}
                     buttonImage={ActivateButton}
                   />
 
+                  <TouchableOpacity onPress={() => disconnectFromDevice(connectedDevice.id)} style={styles.regularButton}>
+                    <Text style={styles.regularButtonText}>Disconnect</Text>
+                  </TouchableOpacity>
+                </>
+                
+                /*1 === 1 ? (
+                <>
+                  
 
-                  <UserInput
+                  {<UserInput
                     connectedDevice={connectedDeviceRef.current}
                     writePassword={writePassword}
                     isPaired={isPaired}
-                  />
+                  />/}
                   </>
                 ) : (
-                  <UserInput
-                    connectedDevice={connectedDeviceRef.current}
-                    writePassword={writePassword}
-                    isPaired={isPaired}
-                  />
-                )
+                  <>
+                    {<UserInput
+                      connectedDevice={connectedDeviceRef.current}
+                      writePassword={writePassword}
+                      isPaired={isPaired}
+                    />/}
+                  </>
+                )*/
               ) : (
                 <>
                   <TouchableOpacity onPress={openModal} style={styles.regularButton}>
@@ -171,7 +179,7 @@ const styles = StyleSheet.create({
   },
   backgroundContainer: {
     flex: 1,
-    position: 'absolute',
+    //position: 'absolute',
     width: dimensions.width,
     height: dimensions.height,
     justifyContent: 'center',

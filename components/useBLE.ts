@@ -15,11 +15,14 @@ import {
 
 import userSecureStore from "./userSecureStore";
 
-const DATA_SERVICE_UUID = "19B10000-E8F2-537E-4F6C-D104768A1214";
-const SWITCH_CHARACTERISTIC_UUID = "19B10001-E8F2-537E-4F6C-D104768A1214"
+const DATA_SERVICE_UUID = "E96BC595-B37B-CC90-0000-9896AC48C638"
+const SWITCH_CHARACTERISTIC_UUID = "E96BC595-B37B-CC90-0200-9896AC48C638"
+const LOCKSTATE_CHARACTERISTIC_UUID = "E96BC595-B37B-CC90-0100-9896AC48C638"
+//const DATA_SERVICE_UUID = "19B10000-E8F2-537E-4F6C-D104768A1214";
+//const SWITCH_CHARACTERISTIC_UUID = "19B10001-E8F2-537E-4F6C-D104768A1214"
 const PASSWORD_CHARACTERISTIC_UUID = "19B10002-E8F2-537E-4F6C-D104768A1214";
 const CLEARANCE_CHARACTERISTIC_UUID = "19B10003-E8F2-537E-4F6C-D104768A1214";
-const LOCKSTATE_CHARACTERISTIC_UUID = "19B10004-E8F2-537E-4F6C-D104768A1214";
+//const LOCKSTATE_CHARACTERISTIC_UUID = "19B10004-E8F2-537E-4F6C-D104768A1214";
 
 function useBLE() {
     const bleManager = useMemo(() => new BleManager(), []);
@@ -113,7 +116,7 @@ function useBLE() {
                         bleManager.stopDeviceScan();
                         connectedDeviceRef.current = device;
                         setConnectedDevice(device);
-                        device.readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
+                        /*device.readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
                             .then(characteristic => {
                                 if (base64.decode(characteristic.value).charCodeAt(0) != prevLockStateRef.current) {
                                     setDifferentLockState(true);
@@ -125,7 +128,7 @@ function useBLE() {
                                 //console.log("[connectToDevice] Lock state value is: ", lockState);
                                 //lockStateRef.current = base64.decode(characteristic.value).charCodeAt(0);
                                 //console.log("[connectToDevice] Lock state value is:", lockStateRef.current);
-                            })
+                            })*/
                     });
                 console.log("[connectToDevice] connection status:", await bleManager.isDeviceConnected(id));
             } catch (e) {
@@ -158,8 +161,8 @@ function useBLE() {
             }
 
             if (
-                device &&
-                (device.localName === "PEDAL LOCK" || device.name === "PEDAL LOCK")
+                device //&&
+                //(device.localName === "LOCK" || device.name === "LOCK")
             ) {
                 setAllDevices((prevState: Device[]) => {
                     if (!isDuplicateDevice(prevState, device)) {
@@ -224,13 +227,16 @@ function useBLE() {
 
     const writePassword = async (device: Device, password: string) => {
         if (device) {
-            await device.
+            clearanceRef.current = 1;
+            setClearance(1);
+            saveDevice(device, "dummy_pwd");
+            /*await device.
                 writeCharacteristicWithResponseForService(
                     DATA_SERVICE_UUID,
                     PASSWORD_CHARACTERISTIC_UUID,
                     base64.encode(password));
                 console.log("[writePassword] Write successful");
-                readClearanceCharacteristic(device, password);
+                readClearanceCharacteristic(device, password);*/
             
         } else {
             console.log("[writePassword] no device connected");
@@ -369,6 +375,7 @@ function useBLE() {
 
     const disconnectFromDevice = async (id: string) => {
         await bleManager.cancelDeviceConnection(id);
+        setConnectedDevice(null);
         console.log('[disconnectFromDevice] device connection status:', await bleManager.isDeviceConnected(id));
     }
 

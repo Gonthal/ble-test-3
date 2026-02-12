@@ -14,6 +14,7 @@ const KeyboardAvoidingContainer = ({ children }) => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ flexGrow: 1}}
             >
                 {children}
             </ScrollView>
