@@ -110,12 +110,15 @@ function useBLE() {
             console.log("[connectToDevice] id:", id);
             try {
                 bleManager.stopDeviceScan();
-                const deviceConnection = await bleManager.connectToDevice(id, { autoConnect: true })
+                const deviceConnection = await bleManager.connectToDevice(id, { autoConnect: false })
                     .then(async device => {
                         await device.discoverAllServicesAndCharacteristics();
                         bleManager.stopDeviceScan();
                         connectedDeviceRef.current = device;
                         setConnectedDevice(device);
+                        clearanceRef.current = 1;
+                        setClearance(1);
+                        saveDevice(device, "dummy_pwd");
                         /*device.readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
                             .then(characteristic => {
                                 if (base64.decode(characteristic.value).charCodeAt(0) != prevLockStateRef.current) {
@@ -133,6 +136,7 @@ function useBLE() {
                 console.log("[connectToDevice] connection status:", await bleManager.isDeviceConnected(id));
             } catch (e) {
                 console.log("[connectToDevice] FAILED TO CONNECT WITH ID", e);
+                setPairedDeviceFound(false);
             }
         } else {
             try {
@@ -143,9 +147,13 @@ function useBLE() {
                         bleManager.stopDeviceScan();
                         connectedDeviceRef.current = device;
                         setConnectedDevice(device);
+                        clearanceRef.current = 1;
+                        setClearance(1);
+                        saveDevice(device, "dummy_pwd");
                     })
             } catch (e) {
                 console.log("[connectToDevice] FAILED TO CONNECT", e);
+                setPairedDeviceFound(false);
             }
         }
 
@@ -292,13 +300,25 @@ function useBLE() {
         }
         return new Promise((resolve) => {
             resolve(decodedValue);
-            /*if (decodedValue === 1) {
-                resolve(true);
-            } else if (decodedValue === 0) {
-                resolve(false);
-            }*/
         });
     };
+    /*const queryLockState = async (device: Device) => {
+        if (device) {
+            try {
+                device.monitorCharacteristicForService(
+                    DATA_SERVICE_UUID,
+                    LOCKSTATE_CHARACTERISTIC_UUID,
+                    (error, LOCKSTATE_CHARACTERISTIC_UUID) => {
+                        if (error) {
+                            alert("[queryLockState] The error is" + error);
+                        } else {
+                            setDifferentLockState(true)
+                        }
+                    }
+                )
+            }
+        }
+    }*/
 
     const checkLockCharacteristic = async (device: Device, prevFlag: boolean) => {
         if (device) {

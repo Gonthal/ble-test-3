@@ -79,6 +79,7 @@ const App = () => {
       await SecureStore.getItemAsync("pairingStatus")
       .then(value => {
         isPairedRef.current = value;
+        //console.log("[handleDeviceConnection] Are we paired? " + isPairedRef.current);
       });
 
       if (isPairedRef.current === 'true') {
@@ -88,7 +89,7 @@ const App = () => {
             await scanForReconnection();
           } else if (pairedDeviceFound === true) {
             await connectToDevice(null, pairedDeviceIDRef.current);
-            await writePassword(connectedDeviceRef.current, passwordRef.current);
+            //await writePassword(connectedDeviceRef.current, passwordRef.current);
             handleDisconnection(pairedDeviceIDRef.current);
           }
         }

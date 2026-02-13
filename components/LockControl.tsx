@@ -77,7 +77,7 @@ export default function LockControl( { deviceRef, buttonImage }: LockControlProp
                     player.play();
                 });
             } catch (error) {
-                //alert('[checkLockState] Error playing sound: ' + error);
+                console.log("[checkLockState] ERROR: " + error);
             }
             
         };
