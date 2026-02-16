@@ -34,6 +34,7 @@ function useBLE() {
     const [isPaired, setIsPaired] = useState<boolean>(false);
     const [isBLEAvailable, setIsBLEAvailable] = useState<boolean>(false);
     const [differentLockState, setDifferentLockState] = useState<boolean>(false);
+    const [lockState, setLockState] = useState<number>(-1);
 
     let connectedDeviceRef = useRef<Device | null>(null);
     let isPairedRef = useRef<string>('false');
@@ -105,8 +106,57 @@ function useBLE() {
     };
 
     const connectToDevice = async (device: Device | null, id: string | null) => {
-        // Used to connect to already known devices, i.e., paired devices
+        // Helper function to setup monitor
+        const setupMonitor = async (device: Device) => {
+            await device.discoverAllServicesAndCharacteristics();
+            bleManager.stopDeviceScan();
+            connectedDeviceRef.current = device;
+            clearanceRef.current = 1;
+            setConnectedDevice(device);
+            setClearance(1);
+            saveDevice(device, "dummy_pwd");
+
+            // Setup the monitor here
+            console.log("[connecToDevice] Setting up notification monitor...");
+            device.monitorCharacteristicForService(
+                DATA_SERVICE_UUID,
+                LOCKSTATE_CHARACTERISTIC_UUID,
+                (error, characteristic) => {
+                    if (error) {
+                        console.error("Monitor error:", error);
+                        return;
+                    }
+                    if (characteristic?.value) {
+                        const val = base64.decode(characteristic.value).charCodeAt(0);
+                        console.log("[connectToDevice] Notification received. New lock state:", val);
+                        setLockState(val);
+                    }
+                }
+            );
+        };
+
         if (id) {
+            try {
+                bleManager.stopDeviceScan();
+                await bleManager.connectToDevice(id, { autoConnect: false })
+                    .then(setupMonitor); // Use the helper
+            } catch (e) {
+                console.log("[connectToDevice] FAILED TO CONNECT WITH ID", e);
+                setPairedDeviceFound(false);
+            }
+        } else {
+            try {
+                bleManager.stopDeviceScan();
+                await bleManager.connectToDevice(device.id, { autoConnect: false })
+                    .then(setupMonitor);
+            } catch (e) {
+                console.log("[connectToDevice] FAILED TO CONNECT WITH ID", e);
+                setPairedDeviceFound(false);
+            }
+        }
+        
+        // Used to connect to already known devices, i.e., paired devices
+        /*if (id) {
             console.log("[connectToDevice] id:", id);
             try {
                 bleManager.stopDeviceScan();
@@ -119,7 +169,7 @@ function useBLE() {
                         clearanceRef.current = 1;
                         setClearance(1);
                         saveDevice(device, "dummy_pwd");
-                        /*device.readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
+                        device.readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
                             .then(characteristic => {
                                 if (base64.decode(characteristic.value).charCodeAt(0) != prevLockStateRef.current) {
                                     setDifferentLockState(true);
@@ -131,7 +181,7 @@ function useBLE() {
                                 //console.log("[connectToDevice] Lock state value is: ", lockState);
                                 //lockStateRef.current = base64.decode(characteristic.value).charCodeAt(0);
                                 //console.log("[connectToDevice] Lock state value is:", lockStateRef.current);
-                            })*/
+                            })
                     });
                 console.log("[connectToDevice] connection status:", await bleManager.isDeviceConnected(id));
             } catch (e) {
@@ -155,7 +205,7 @@ function useBLE() {
                 console.log("[connectToDevice] FAILED TO CONNECT", e);
                 setPairedDeviceFound(false);
             }
-        }
+        }*/
 
     };
 
@@ -254,7 +304,15 @@ function useBLE() {
     const activateButton = async (device: Device) => {
         //console.log("[activateButton] device:", device);
         if (device) {
-            await checkLockCharacteristic(device, true);
+            // The monitor established in connectToDevice will handle the UI update.
+            device.writeCharacteristicWithResponseForService(
+                DATA_SERVICE_UUID,
+                SWITCH_CHARACTERISTIC_UUID,
+                base64.encode('1')
+            )
+            .then(() => console.log("[activateButton] sent successful"))
+            .catch(error => console.error("[activateButton] ERROR:", error));
+            /*await checkLockCharacteristic(device, true);
             device
                 .writeCharacteristicWithResponseForService(
                     DATA_SERVICE_UUID,
@@ -273,19 +331,6 @@ function useBLE() {
                 setDifferentLockState(true);
             } else if (prevLockStateRef.current === actualLockStateRef.current) {
                 //setDifferentLockState(false);
-            }
-            /*if (differentLockState === false) {
-                device
-                    .readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
-                    .then(characteristic => {
-                        if (base64.decode(characteristic.value).charCodeAt(0) != prevLockStateRef.current) {
-                            setDifferentLockState(true);
-                            prevLockStateRef.current = base64.decode(characteristic.value).charCodeAt(0);
-                        } else {
-                            //setDifferentLockState(false);
-                            prevLockStateRef.current = base64.decode(characteristic.value).charCodeAt(0);
-                        }
-                    });
             }*/
         }
     }
@@ -466,6 +511,7 @@ function useBLE() {
         isBLEAvailable,
         differentLockState,
         setDifferentLockState,
+        lockState,
     };
 }
 

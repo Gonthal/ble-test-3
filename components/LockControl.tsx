@@ -16,15 +16,15 @@ export default function LockControl( { deviceRef, buttonImage }: LockControlProp
     
     const {
         activateButton,
-        queryLockState,
+        lockState,
     } = useBLE();
 
     const { player } = soundPlayer();
     
-    const [lockState, setLockState] = useState<boolean | number | null>(null);
+    //const [lockState, setLockState] = useState<boolean | number | null>(null);
     const [showGear, setShowGear] = useState<boolean>(false);
 
-    const prevLockState = useRef<boolean | number | null>(null);
+    const prevLockStateRef = useRef<number | null>(null);
     const startupRef = useRef<boolean>(true);
     const gearRef = useRef<LottieView>(null);
     const gearAnimation = require('../assets/simple-gear.json');
@@ -39,8 +39,10 @@ export default function LockControl( { deviceRef, buttonImage }: LockControlProp
 
     const sendLockCommand = async () => {
         console.log('[sendLockCommand] Sending lock command');
+
+        activateButton(deviceRef.current);
         
-        activateButton(deviceRef.current)
+        /*activateButton(deviceRef.current)
             .then(() => {
                 //console.log('[sendLockCommand] Lock command sent');
                 queryLockState(deviceRef.current)
@@ -48,7 +50,7 @@ export default function LockControl( { deviceRef, buttonImage }: LockControlProp
                         console.log(`[sendLockCommand] Lock state is ${state}`);
                         setLockState(state);
                     });
-            });
+            });*/
     }
 
     const checkLockState = async () => {
@@ -57,16 +59,21 @@ export default function LockControl( { deviceRef, buttonImage }: LockControlProp
         // If this is the first check, just set the previous state and do nothing
         if (startupRef.current === true) {
             console.log('[checkLockState] Startup detected, setting previous state');
-            prevLockState.current = lockState;
+            alert('[checkLockState] Startup detected, setting previous state')
             startupRef.current = false;
         };
 
+        if (lockState === -1) {
+            alert("[checkLockState] I am in -1!");
+            return;
+        }
+
         // Check if there is an actual change in state
-        if (lockState !== prevLockState.current) {
+        if (lockState !== prevLockStateRef.current) {
             //alert('[checkLockState] Lock state has changed');
-            console.log('[checkLockState] Lock state has changed');
+            console.log('[checkLockState] Lock state has changed to', lockState);
             // Update previous state
-            prevLockState.current = lockState;
+            prevLockStateRef.current = lockState;
             // Play the animation and the sound
             playAnimation();
             try {
@@ -84,11 +91,19 @@ export default function LockControl( { deviceRef, buttonImage }: LockControlProp
     };
 
     useEffect(() => {
-        checkLockState();
+        (async () => {
+            alert("[LockControl.tsx] Checking Lock State");
+            checkLockState();
+            prevLockStateRef.current = lockState;
+            return () => {
+                prevLockStateRef.current = -2;
+            }
+        })();
     }, [lockState]);
 
     return (
         <>
+            <Text>Lock state is{lockState} and previous is {prevLockStateRef.current}</Text>
             {showGear && (
                 <MovingImage
                     animation={gearRef}

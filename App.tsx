@@ -49,6 +49,7 @@ const App = () => {
     clearance,
     pairedDeviceFound,
     isBLEAvailable,
+    lockState, // Debugging
   } = useBLE();
 
   const { save, getValueFor } = userSecureStore();
