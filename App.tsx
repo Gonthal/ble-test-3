@@ -42,6 +42,7 @@ const App = () => {
     retrieveDevice,
     disconnectFromDevice,
     handleDisconnection,
+    activateButton,
     isPairedRef,
     isPaired,
     pairedDeviceIDRef,
@@ -49,7 +50,7 @@ const App = () => {
     clearance,
     pairedDeviceFound,
     isBLEAvailable,
-    lockState, // Debugging
+    lockState,
   } = useBLE();
 
   const { save, getValueFor } = userSecureStore();
@@ -126,32 +127,10 @@ const App = () => {
                   <LockControl
                     deviceRef={connectedDeviceRef}
                     buttonImage={ActivateButton}
+                    lockState={lockState}
+                    activateButton={activateButton}
                   />
-
-                  <TouchableOpacity onPress={() => disconnectFromDevice(connectedDevice.id)} style={styles.regularButton}>
-                    <Text style={styles.regularButtonText}>Disconnect</Text>
-                  </TouchableOpacity>
                 </>
-                
-                /*1 === 1 ? (
-                <>
-                  
-
-                  {<UserInput
-                    connectedDevice={connectedDeviceRef.current}
-                    writePassword={writePassword}
-                    isPaired={isPaired}
-                  />/}
-                  </>
-                ) : (
-                  <>
-                    {<UserInput
-                      connectedDevice={connectedDeviceRef.current}
-                      writePassword={writePassword}
-                      isPaired={isPaired}
-                    />/}
-                  </>
-                )*/
               ) : (
                 <>
                   <TouchableOpacity onPress={openModal} style={styles.regularButton}>
@@ -177,32 +156,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingVertical: dimensions.height / 3,
-    //backgroundColor: "#414141", // charcoal
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backgroundContainer: {
     flex: 1,
-    //position: 'absolute',
     width: dimensions.width,
     height: dimensions.height,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#414141',
   },
-  mainTitleWrapper: { // heartRateTitleWrapper
+  mainTitleWrapper: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  heartRateTitleText: {
-    fontSize: 30,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginHorizontal: 20,
-    color: "black",
-  },
-  heartRateText: {
-    fontSize: 10,
-    marginTop: 5,
   },
   regularButton: {
     backgroundColor: "#C0C0C0", // Argentinian blue

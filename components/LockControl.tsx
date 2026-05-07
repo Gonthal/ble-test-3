@@ -7,17 +7,19 @@ import { Device } from 'react-native-ble-plx';
 import MovingImage from './MovingImage';
 
 interface LockControlProps {
-    deviceRef: React.MutableRefObject<Device>,
+    deviceRef: React.MutableRefObject<Device | null>,
     buttonImage: any,
+    lockState: number,
+    activateButton: (device: Device) => Promise<void>
     // ... other props if needed
 }
 
-export default function LockControl( { deviceRef, buttonImage }: LockControlProps) {
-    
-    const {
-        activateButton,
-        lockState,
-    } = useBLE();
+export default function LockControl({
+    deviceRef,
+    buttonImage,
+    lockState,      // Received from App.tsx
+    activateButton  // Received from App.tsx
+}: LockControlProps) {
 
     const { player } = soundPlayer();
     
@@ -25,85 +27,44 @@ export default function LockControl( { deviceRef, buttonImage }: LockControlProp
     const [showGear, setShowGear] = useState<boolean>(false);
 
     const prevLockStateRef = useRef<number | null>(null);
-    const startupRef = useRef<boolean>(true);
+    //const startupRef = useRef<boolean>(true);
     const gearRef = useRef<LottieView>(null);
     const gearAnimation = require('../assets/simple-gear.json');
 
     const playAnimation = () => {
         setShowGear(true);
-
-        setTimeout(() => {
-            setShowGear(false);
-        }, 4000);
+        setTimeout(() => setShowGear(false), 4000);
     };
 
+    // Send BLE command to open or close the lock
     const sendLockCommand = async () => {
-        console.log('[sendLockCommand] Sending lock command');
-
-        activateButton(deviceRef.current);
-        
-        /*activateButton(deviceRef.current)
-            .then(() => {
-                //console.log('[sendLockCommand] Lock command sent');
-                queryLockState(deviceRef.current)
-                    .then(state => {
-                        console.log(`[sendLockCommand] Lock state is ${state}`);
-                        setLockState(state);
-                    });
-            });*/
+        if (deviceRef.current) {
+            console.log('[sendLockCommand] Sending lock command');
+            activateButton(deviceRef.current);
+        }
     }
 
-    const checkLockState = async () => {
-        console.log('[checkLockState] Checking lock state');
-        //alert('Checking lock state...');
-        // If this is the first check, just set the previous state and do nothing
-        if (startupRef.current === true) {
-            console.log('[checkLockState] Startup detected, setting previous state');
-            alert('[checkLockState] Startup detected, setting previous state')
-            startupRef.current = false;
-        };
+    // Play animation and sound based on whether the lock changed its state 
+    useEffect(() => {
+        // Ignore initial state or invalid states
+        if (lockState === -1) return;
 
-        if (lockState === -1) {
-            alert("[checkLockState] I am in -1!");
-            return;
-        }
-
-        // Check if there is an actual change in state
+        // Only run is the state actually changed
         if (lockState !== prevLockStateRef.current) {
-            //alert('[checkLockState] Lock state has changed');
-            console.log('[checkLockState] Lock state has changed to', lockState);
-            // Update previous state
-            prevLockStateRef.current = lockState;
-            // Play the animation and the sound
+            console.log('[LockControl] State changed to:', lockState);
+
+            // Play effects
             playAnimation();
             try {
-                player.seekTo(0)
-                .then(() => {
-                    //alert('[checkLockState] Playing sound 2');
-                    console.log('[checkLockState] Playing sound 2');
-                    player.play();
-                });
+                player.seekTo(0).then(() => player.play());
             } catch (error) {
-                console.log("[checkLockState] ERROR: " + error);
+                console.log('[LockControl] Sound error:', error);
             }
-            
-        };
-    };
-
-    useEffect(() => {
-        (async () => {
-            alert("[LockControl.tsx] Checking Lock State");
-            checkLockState();
-            prevLockStateRef.current = lockState;
-            return () => {
-                prevLockStateRef.current = -2;
-            }
-        })();
+        }
     }, [lockState]);
 
     return (
         <>
-            <Text>Lock state is{lockState} and previous is {prevLockStateRef.current}</Text>
             {showGear && (
                 <MovingImage
                     animation={gearRef}
@@ -142,7 +103,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 150,
     width: 150,
-    marginHorizontal: 100,
     marginBottom: 10,
     borderRadius: 100,
   },
@@ -154,5 +114,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 58,
     paddingHorizontal: 20,
+    alignItems: 'center',
   },
 });
