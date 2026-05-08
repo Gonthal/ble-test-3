@@ -6,7 +6,13 @@ import {
     StyleSheet,
 } from 'react-native';
 
-const KeyboardAvoidingContainer = ({ children }) => {
+import { ReactNode } from 'react';
+
+interface KeyboardAvoidingViewprops {
+    children: ReactNode;
+}
+
+const KeyboardAvoidingContainer = ({ children }: KeyboardAvoidingViewprops) => {
     return (
         <SafeAreaView style={Styles.safeAreaContainer}>
             <KeyboardAvoidingView

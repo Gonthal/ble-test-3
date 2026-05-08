@@ -13,8 +13,6 @@ const UseAppState = () => {
     writePassword,
     connectedDevice,
     pairedDeviceID,
-    password,
-    bleManager,
   } = useBLE();
 
   useEffect(() => {

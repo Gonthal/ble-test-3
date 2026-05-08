@@ -10,7 +10,16 @@ import * as SecureStore from "expo-secure-store";
 
 import userSecureStore from './userSecureStore';
 
-export default function UserInput({ connectedDevice, writePassword, isPaired }) {
+import { Device } from 'react-native-ble-plx';
+
+interface UserInputProps {
+    connectedDevice: Device,
+    writePassword: (device: Device, password: string) => void,
+    isPaired: boolean
+
+}
+
+export default function UserInput({ connectedDevice, writePassword, isPaired }: UserInputProps) {
 
     const [userText, setUserText] = useState<string>('');
     const [changePassword, setChangePassword] = useState<boolean>(false);
@@ -18,7 +27,7 @@ export default function UserInput({ connectedDevice, writePassword, isPaired }) 
 
     const { save, getValueFor } = userSecureStore();
 
-    const checkPassword = async (input) => {
+    const checkPassword = async (input: string) => {
         try {
             await SecureStore.getItemAsync("password")
             .then(value => {

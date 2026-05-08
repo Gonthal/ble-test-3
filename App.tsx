@@ -80,7 +80,7 @@ const App = () => {
     try {
       await SecureStore.getItemAsync("pairingStatus")
       .then(value => {
-        isPairedRef.current = value;
+        isPairedRef.current = value ?? 'false';
         //console.log("[handleDeviceConnection] Are we paired? " + isPairedRef.current);
       });
 
@@ -107,7 +107,9 @@ const App = () => {
         handleDeviceConnection();
       }   
       return () => {
-        disconnectFromDevice(connectedDevice.id);
+        if (connectedDevice) {
+          disconnectFromDevice(connectedDevice.id)
+        }
       }
     })();
   }, [pairedDeviceFound, isBLEAvailable]);

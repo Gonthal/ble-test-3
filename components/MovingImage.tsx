@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import LottieView from 'lottie-react-native';
 
 interface MovingImageProps {
-    animation: React.MutableRefObject<LottieView>;
+    animation: React.MutableRefObject<LottieView | null>;
     source: any;
     visibility: boolean;
 }
