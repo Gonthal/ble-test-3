@@ -8,19 +8,22 @@ interface PasswordWdigetProps {
     clearance: number;
     authenticateDevice: (device: Device, pass: string) => void;
     changeDevicePassword: (device: Device, newPass: string) => Promise<boolean>;
+    savePassword: (password: string) => void;
 }
 
 export default function PasswordWidget({
     device,
     clearance,
     authenticateDevice,
-    changeDevicePassword
+    changeDevicePassword,
+    savePassword
 }: PasswordWdigetProps) {
     const [inputValue, setInputValue] = useState('');
 
     const handleAuth = () => {
         if (device && inputValue.length == 6) {
             authenticateDevice(device, inputValue);
+            //savePassword(inputValue);
             setInputValue(''); // Clear input after sending
         } else {
             alert("Password must be exactly 6 characters.");
@@ -32,6 +35,7 @@ export default function PasswordWidget({
             const success = await changeDevicePassword(device, inputValue);
             if (success) {
                 alert("Password updated successfully!");
+                //savePassword(inputValue);
                 setInputValue('');
             }
         }

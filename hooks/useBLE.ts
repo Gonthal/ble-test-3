@@ -115,9 +115,7 @@ function useBLE() {
             await device.discoverAllServicesAndCharacteristics();
             bleManager.stopDeviceScan();
             connectedDeviceRef.current = device;
-            clearanceRef.current = 1;
             setConnectedDevice(device);
-            setClearance(1);
             //saveDevice(device, "dummy_pwd");
 
             // Setup the monitor here
@@ -235,8 +233,8 @@ function useBLE() {
 
     const writePassword = async (device: Device, password: string) => {
         if (device) {
-            clearanceRef.current = 1;
-            setClearance(1);
+            //clearanceRef.current = 1;
+            //setClearance(1);
             //saveDevice(device, "dummy_pwd");
             /*await device.
                 writeCharacteristicWithResponseForService(
@@ -467,8 +465,6 @@ function useBLE() {
 
         try {
             // Send the new password
-            // We might need to ensure that the WBZ451 knows how to distinguish an auth attempt
-            // from a password update attempt
             await device.writeCharacteristicWithResponseForService(
                 DATA_SERVICE_UUID,
                 PASSWORD_CHARACTERISTIC_UUID,
@@ -486,6 +482,29 @@ function useBLE() {
             await checkBLEState();
         })();
     }, [bleManager]);
+
+    const autoConnectToDevice = (savedId: string, savedPassword: string) => {
+        console.log("[autoConnectToDevice] Searching for saved device in background...");
+
+        bleManager.startDeviceScan(null, null, async (error, device) => {
+            if (error) {
+                console.log("[autoConnectToDevice] Scan error:", error);
+                return;
+            }
+
+            if (device && device.id === savedId) {
+                console.log("[autoConnectToDevice] Device found! Stopping scan and connecting...");
+
+                bleManager.stopDeviceScan();
+
+                try {
+                    await connectToDevice(device, null);
+                } catch (e) {
+                    console.log("[autoConnectToDevice] Connection failed:", e);
+                }
+            }
+        });
+    }
 
     return {
         connectToDevice,
@@ -506,6 +525,7 @@ function useBLE() {
         handleDisconnection,
         authenticateDevice,
         changeDevicePassword,
+        autoConnectToDevice,
         pairedDeviceID,
         isPairedRef,
         isPaired,

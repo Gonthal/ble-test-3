@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, DO_NOT_USE_OR_YOU_WILL_BE_FIRED_EXPERIMENTAL_FORM_ACTIONS, DO_NOT_USE_OR_YOU_WILL_BE_FIRED_EXPERIMENTAL_REACT_NODES } from "react";
 import {
   Dimensions,
   Image,
@@ -46,6 +46,7 @@ const App = () => {
     activateButton,
     authenticateDevice,
     changeDevicePassword,
+    autoConnectToDevice,
     isPairedRef,
     isPaired,
     pairedDeviceIDRef,
@@ -53,7 +54,7 @@ const App = () => {
     clearance,
     pairedDeviceFound,
     isBLEAvailable,
-    lockState,
+    lockState
   } = useBLE();
 
   const { save, getValueFor } = userSecureStore();
@@ -81,8 +82,40 @@ const App = () => {
     setIsModalVisible(true);
   };
 
+  const autoConnect = async () => {
+    console.log("[main] I am in or som");
+
+    if (!isBLEAvailable) { return; }
+
+    try {
+      const savedId = await getValueFor("deviceID");
+      const isPaired = await getValueFor("pairingStatus");
+
+      if (savedId && isPaired === 'true') {
+        console.log("[main] Found saved device, attempting auto-connection...");
+        const savedPassword = await getValueFor("password");
+        autoConnectToDevice(savedId, savedPassword ?? '');
+      }
+    } catch (error) {
+      console.error("[main] Failed to auto-connect on startup", error);
+    }
+  }
+
   useEffect(() => {
+    (async () => {
+      autoConnect();
+
+      return () => {
+        if (connectedDevice) {
+          disconnectFromDevice(connectedDevice.id);
+        }
+      }
+    })();
+  }, [isBLEAvailable])
+
+  /*useEffect(() => {
     const autoConnect = async () => {
+      console.log("[autoConnect] I am in or som");
       // Do nothing if BLE is turned off or not ready yet
       if (!isBLEAvailable) return;
 
@@ -94,7 +127,8 @@ const App = () => {
         // If we are paired and have an ID, tell the BLE Manager to connect
         if (savedId && isPaired === 'true') {
           console.log("Found saved device, attempting auto-connection...");
-          await connectToDevice(null, savedId);
+          //await connectToDevice(null, savedId);
+          autoConnectToDevice(savedId);
         }
       } catch (error) {
           console.error("Failed to auto-connect on startup", error);
@@ -108,14 +142,23 @@ const App = () => {
         }
       }
     }
-  }, [isBLEAvailable])
+  }, [isBLEAvailable])*/
 
   useEffect(() => {
     if (connectedDevice && clearance === 1) {
+      console.log("[main] Saving device...");
       save("deviceID", connectedDevice.id);
       save("pairingStatus", "true");
+    } else {
+      console.log("[main] I ran");
     }
   }, [clearance, connectedDevice]);
+
+  // Intercept the manual authentication to save the password
+  const savePassword = (pass: string) => {
+    console.log("[savePassword] I am saving the password!");
+    save("password", pass);
+  }
 
   /*const handleDeviceConnection = async () => {
     try {
@@ -177,6 +220,7 @@ const App = () => {
                 clearance={clearance}
                 authenticateDevice={authenticateDevice}
                 changeDevicePassword={changeDevicePassword}
+                savePassword={savePassword}
               />
             )
             // STATE 3: CONNECTED AND CLEARED
@@ -189,18 +233,28 @@ const App = () => {
                   activateButton={activateButton}
                 />
 
-                <View style={{ marginTop: 40 }}>
+                <View style={{ marginTop: 0 }}>
                     <PasswordWidget
                       device={connectedDevice}
                       clearance={clearance}
                       authenticateDevice={authenticateDevice}
                       changeDevicePassword={changeDevicePassword}
+                      savePassword={savePassword}
                     />
                 </View>
               </>
             )
           }
         </View>
+        {
+          <TouchableOpacity style={styles.regularButton} onPress={() => {
+            SecureStore.setItemAsync("deviceID", "none");
+            SecureStore.setItemAsync("isPaired", "none");
+            SecureStore.setItemAsync("password", "none");
+          }}>
+              <Text style={styles.regularButtonText}>Delete device</Text>
+          </TouchableOpacity>
+        }
       <DeviceModal
         closeModal={hideModal}
         visible={isModalVisible}
