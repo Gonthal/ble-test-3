@@ -14,13 +14,14 @@ import {
 import * as SecureStore from 'expo-secure-store';
 
 import DeviceModal from "./components/DeviceConnectionModal";
-import useBLE from "./components/useBLE";
-import UserInput from "./components/UserInput";
-import userSecureStore from "./components/userSecureStore";
+import useBLE from "./hooks/useBLE";
+//import UserInput from "./components/UserInput";
+import userSecureStore from "./hooks/userSecureStore";
 import KeyboardAvoidingContainer from "./components/KeyboardAvoidingView";
-import LottieView from "lottie-react-native";
-import soundPlayer from "./components/soundPlayer";
+//import LottieView from "lottie-react-native";
+//import soundPlayer from "./hooks/soundPlayer";
 import LockControl from "./components/LockControl";
+import PasswordWidget from "./components/PasswordWidget";
 
 const BackgroundImage = Platform.select({
   ios: require('./assets/background-image-ios.jpg'),
@@ -39,10 +40,12 @@ const App = () => {
     scanForPeripherals,
     scanForReconnection,
     writePassword,
-    retrieveDevice,
+    //retrieveDevice,
     disconnectFromDevice,
     handleDisconnection,
     activateButton,
+    authenticateDevice,
+    changeDevicePassword,
     isPairedRef,
     isPaired,
     pairedDeviceIDRef,
@@ -55,7 +58,9 @@ const App = () => {
 
   const { save, getValueFor } = userSecureStore();
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [changePassword, setChangePassword] = useState<boolean>(false);
+
+  type AppState = 'DISCONNECTED' | 'SCANNING' | 'CONNECTING' | 'AUTHENTICATING' | 'CLEARED';
+  const [appState, setAppState] = useState<AppState>('DISCONNECTED');
 
   const scanForDevices = async () => {
     const isPermissionsEnabled = await requestPermissions();
@@ -76,7 +81,43 @@ const App = () => {
     setIsModalVisible(true);
   };
 
-  const handleDeviceConnection = async () => {
+  useEffect(() => {
+    const autoConnect = async () => {
+      // Do nothing if BLE is turned off or not ready yet
+      if (!isBLEAvailable) return;
+
+      try {
+        // Ask the Storage Manager for the saved data
+        const savedId = await getValueFor("deviceID");
+        const isPaired = await getValueFor("pairingStatus");
+
+        // If we are paired and have an ID, tell the BLE Manager to connect
+        if (savedId && isPaired === 'true') {
+          console.log("Found saved device, attempting auto-connection...");
+          await connectToDevice(null, savedId);
+        }
+      } catch (error) {
+          console.error("Failed to auto-connect on startup", error);
+      };
+
+      autoConnect();
+
+      return () => {
+        if (connectedDevice) {
+          disconnectFromDevice(connectedDevice.id);
+        }
+      }
+    }
+  }, [isBLEAvailable])
+
+  useEffect(() => {
+    if (connectedDevice && clearance === 1) {
+      save("deviceID", connectedDevice.id);
+      save("pairingStatus", "true");
+    }
+  }, [clearance, connectedDevice]);
+
+  /*const handleDeviceConnection = async () => {
     try {
       await SecureStore.getItemAsync("pairingStatus")
       .then(value => {
@@ -112,9 +153,65 @@ const App = () => {
         }
       }
     })();
-  }, [pairedDeviceFound, isBLEAvailable]);
-
+  }, [pairedDeviceFound, isBLEAvailable]);*/
   return (
+    <KeyboardAvoidingContainer>
+      <StatusBar backgroundColor={"#414141"} />
+      <ImageBackground
+        style={styles.backgroundContainer}
+        resizeMode="cover"
+        source={BackgroundImage}
+      >
+        <View style={styles.container}>
+          {
+            // STATE 1: NOT CONNECTED
+            !connectedDevice ? (
+              <TouchableOpacity onPress={openModal} style={styles.regularButton}>
+                <Text style={styles.regularButtonText}>Connect</Text>
+              </TouchableOpacity>
+            )
+            // STATE 2: CONNECTED BUT LOCKED
+            : clearance === 0 ? (
+              <PasswordWidget
+                device={connectedDevice}
+                clearance={clearance}
+                authenticateDevice={authenticateDevice}
+                changeDevicePassword={changeDevicePassword}
+              />
+            )
+            // STATE 3: CONNECTED AND CLEARED
+            : (
+              <>
+                <LockControl
+                  deviceRef={connectedDeviceRef}
+                  buttonImage={ActivateButton}
+                  lockState={lockState}
+                  activateButton={activateButton}
+                />
+
+                <View style={{ marginTop: 40 }}>
+                    <PasswordWidget
+                      device={connectedDevice}
+                      clearance={clearance}
+                      authenticateDevice={authenticateDevice}
+                      changeDevicePassword={changeDevicePassword}
+                    />
+                </View>
+              </>
+            )
+          }
+        </View>
+      <DeviceModal
+        closeModal={hideModal}
+        visible={isModalVisible}
+        connectToPeripheral={connectToDevice}
+        devices={allDevices}
+      />
+      </ImageBackground>
+    </KeyboardAvoidingContainer>
+  )
+}
+  /*return (
     <KeyboardAvoidingContainer>
       <StatusBar backgroundColor="#414141" />
       <ImageBackground
@@ -151,8 +248,7 @@ const App = () => {
       </ImageBackground>
     </KeyboardAvoidingContainer>
     
-  )
-}
+  )*/
 
 const styles = StyleSheet.create({
   container: {

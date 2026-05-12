@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Image } from 'react-native';
 import LottieView from 'lottie-react-native';
-import soundPlayer from './soundPlayer';
-import useBLE from './useBLE';
+import soundPlayer from '../hooks/soundPlayer';
+import useBLE from '../hooks/useBLE';
 import { Device } from 'react-native-ble-plx';
 import MovingImage from './MovingImage';
 

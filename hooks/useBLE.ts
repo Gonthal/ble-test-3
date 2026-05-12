@@ -3,7 +3,7 @@ import { PermissionsAndroid, Platform } from "react-native";
 
 import * as ExpoDevice from "expo-device";
 
-import * as SecureStore from "expo-secure-store";
+//import * as SecureStore from "expo-secure-store";
 
 import  base64  from "react-native-base64";
 import {
@@ -13,12 +13,12 @@ import {
     Device,
 } from "react-native-ble-plx";
 
-import userSecureStore from "./userSecureStore";
+//import userSecureStore from "./userSecureStore";
 
 const DATA_SERVICE_UUID = "E96BC595-B37B-CC90-0000-9896AC48C638"
 const LOCKSTATE_CHARACTERISTIC_UUID = "E96BC595-B37B-CC90-0100-9896AC48C638"
-const SWITCH_CHARACTERISTIC_UUID = "E96BC595-B37B-CC90-0200-9896AC48C638"
-const PASSWORD_CHARACTERISTIC_UUID = "E96BC595-B37B-CC90-0300-9896AC48C638"
+const SWITCH_CHARACTERISTIC_UUID    = "E96BC595-B37B-CC90-0200-9896AC48C638"
+const PASSWORD_CHARACTERISTIC_UUID  = "E96BC595-B37B-CC90-0300-9896AC48C638"
 const CLEARANCE_CHARACTERISTIC_UUID = "E96BC595-B37B-CC90-0400-9896AC48C638"
 
 
@@ -51,7 +51,7 @@ function useBLE() {
 
     const [pairedDeviceID, setPairedDeviceID] = useState<string>('');
 
-    const { save, getValueFor } = userSecureStore();
+    //const { save, getValueFor } = userSecureStore();
 
     const requestAndroid31Permissions = async () => {
         const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -118,7 +118,7 @@ function useBLE() {
             clearanceRef.current = 1;
             setConnectedDevice(device);
             setClearance(1);
-            saveDevice(device, "dummy_pwd");
+            //saveDevice(device, "dummy_pwd");
 
             // Setup the monitor here
             console.log("[connecToDevice] Setting up notification monitor...");
@@ -187,8 +187,6 @@ function useBLE() {
         bleManager.startDeviceScan(null, null, (error, device) => {
             if (error) {
                 console.log('[scanForReconnection]', error);
-                //alert(`[scanForReconnection] ${error}`);
-                //bleManager.stopDeviceScan();
             }
             console.log(`[scanForReconnection] ID current: ${pairedDeviceIDRef.current} | p. device found: ${pairedDeviceFound}`);
             //alert(`[scanForReconnection] ID current: ${pairedDeviceIDRef.current} | p. device found: ${pairedDeviceFound}`)
@@ -226,7 +224,7 @@ function useBLE() {
                     console.log("[readClearanceCharacteristic] clearanceRef is:", clearanceRef.current);
                     console.log('[readClearanceCharacteristic] clearance type is:', typeof(clearanceRef.current));
 
-                    saveDevice(device, password);
+                    //saveDevice(device, password);
                     
                 })
                 .catch(error => {
@@ -239,7 +237,7 @@ function useBLE() {
         if (device) {
             clearanceRef.current = 1;
             setClearance(1);
-            saveDevice(device, "dummy_pwd");
+            //saveDevice(device, "dummy_pwd");
             /*await device.
                 writeCharacteristicWithResponseForService(
                     DATA_SERVICE_UUID,
@@ -331,7 +329,7 @@ function useBLE() {
         }
     }
 
-    const saveDevice = async (device: Device, password: string) => {
+    /*const saveDevice = async (device: Device, password: string) => {
         if (clearanceRef.current) {
             console.log('[saveDevice] Saving device...');
             isPairedRef.current = 'true';
@@ -346,9 +344,9 @@ function useBLE() {
         } else {
             console.error('[saveDevice] Clearance is needed.');
         }
-    }
+    }*/
 
-    const deleteDevice = async () => {
+    /*const deleteDevice = async () => {
         //await bleManager.cancelDeviceConnection(pairedDeviceIDRef.current);
         await SecureStore.deleteItemAsync("deviceID");
         await SecureStore.deleteItemAsync("password");
@@ -362,9 +360,9 @@ function useBLE() {
             ${SecureStore.getItemAsync("password")},
             ${SecureStore.getItemAsync("pairingStatus")}.`
         );
-    }
+    }*/
 
-    const retrieveDevice = async () => {
+    /*const retrieveDevice = async () => {
         //scanForPeripherals();
         //alert('[retrieveDevice]');
 
@@ -388,7 +386,7 @@ function useBLE() {
             console.log(`[retrieveDevice] error: ${error}`);
             //alert(`[retrieveDevice] error: ${error}.`);
         }
-    }
+    }*/
 
     const disconnectFromDevice = async (id: string) => {
         await bleManager.cancelDeviceConnection(id);
@@ -429,6 +427,60 @@ function useBLE() {
         }, true)
     }
 
+    // Authentication function
+    const authenticateDevice = async (device: Device, password: string) => {
+        if (!device) return;
+
+        try {
+            // We setup a listener first so we do not miss the WBZ451 reply
+            device.monitorCharacteristicForService(
+                DATA_SERVICE_UUID,
+                CLEARANCE_CHARACTERISTIC_UUID,
+                (error, characteristic) => {
+                    if (error) {
+                        console.error("Clearance error:", error);
+                        return;
+                    }
+                    if (characteristic?.value) {
+                        const status = base64.decode(characteristic.value).charCodeAt(0);
+                        setClearance(status); // 1 = Cleared, 0 = Rejected
+                    }
+                }
+            );
+            // Then, we send a 6-byte password to the board
+            await device.writeCharacteristicWithResponseForService(
+                DATA_SERVICE_UUID,
+                PASSWORD_CHARACTERISTIC_UUID,
+                base64.encode(password)
+            );
+        } catch (error) {
+            console.error("Authentication failed to send:", error);
+        }
+    };
+
+    // The change password function
+    const changeDevicePassword = async (device: Device, newPassword: string) => {
+        if (clearance !== 1) {
+            console.warn("Unauthorized: Cannot change password without clearance.");
+            return false;
+        } 
+
+        try {
+            // Send the new password
+            // We might need to ensure that the WBZ451 knows how to distinguish an auth attempt
+            // from a password update attempt
+            await device.writeCharacteristicWithResponseForService(
+                DATA_SERVICE_UUID,
+                PASSWORD_CHARACTERISTIC_UUID,
+                base64.encode(newPassword)
+            );
+            return true; // Success
+        } catch (error) {
+            console.error("Failed to update password:", error);
+            return false;
+        }
+    };
+
     useEffect(() => {
         (async () => {
             await checkBLEState();
@@ -447,11 +499,13 @@ function useBLE() {
         writePassword,
         activateButton,
         queryLockState,
-        saveDevice,
-        deleteDevice,
-        retrieveDevice,
+        //saveDevice,
+        //deleteDevice,
+        //retrieveDevice,
         disconnectFromDevice,
         handleDisconnection,
+        authenticateDevice,
+        changeDevicePassword,
         pairedDeviceID,
         isPairedRef,
         isPaired,
