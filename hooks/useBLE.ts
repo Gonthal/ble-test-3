@@ -161,7 +161,9 @@ function useBLE() {
     const isDuplicateDevice = (devices: Device[], nextDevice: Device) =>
         devices.findIndex((device) => nextDevice.id === device.id) > -1;
 
-    const scanForPeripherals = () => 
+    const scanForPeripherals = () => {
+        bleManager.stopDeviceScan();
+
         bleManager.startDeviceScan(null, null, (error, device) => {
             if (error) {
                 console.log("[scanForPeripherals]", error);
@@ -177,9 +179,11 @@ function useBLE() {
                     }
                     return prevState;
                 });
-                bleManager.stopDeviceScan();
+                //bleManager.stopDeviceScan();
             }
         });
+    }
+        
 
     const scanForReconnection = () => 
         bleManager.startDeviceScan(null, null, (error, device) => {

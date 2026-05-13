@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+import { Device } from 'react-native-ble-plx';
+
 import * as SecureStore from 'expo-secure-store';
 
 import DeviceModal from "./components/DeviceConnectionModal";
@@ -62,6 +64,7 @@ const App = () => {
 
   type AppState = 'DISCONNECTED' | 'SCANNING' | 'CONNECTING' | 'AUTHENTICATING' | 'CLEARED';
   const [appState, setAppState] = useState<AppState>('DISCONNECTED');
+  const [hasAttemptedAutoAuth, setHasAttemptedAutoAuth] = useState<boolean>(false);
 
   const scanForDevices = async () => {
     const isPermissionsEnabled = await requestPermissions();
@@ -102,47 +105,14 @@ const App = () => {
   }
 
   useEffect(() => {
-    (async () => {
-      autoConnect();
+    autoConnect();
 
-      return () => {
-        if (connectedDevice) {
-          disconnectFromDevice(connectedDevice.id);
-        }
+    return () => {
+      if (connectedDevice) {
+        disconnectFromDevice(connectedDevice.id);
       }
-    })();
-  }, [isBLEAvailable])
-
-  /*useEffect(() => {
-    const autoConnect = async () => {
-      console.log("[autoConnect] I am in or som");
-      // Do nothing if BLE is turned off or not ready yet
-      if (!isBLEAvailable) return;
-
-      try {
-        // Ask the Storage Manager for the saved data
-        const savedId = await getValueFor("deviceID");
-        const isPaired = await getValueFor("pairingStatus");
-
-        // If we are paired and have an ID, tell the BLE Manager to connect
-        if (savedId && isPaired === 'true') {
-          console.log("Found saved device, attempting auto-connection...");
-          //await connectToDevice(null, savedId);
-          autoConnectToDevice(savedId);
-        }
-      } catch (error) {
-          console.error("Failed to auto-connect on startup", error);
-      };
-
-      autoConnect();
-
-      return () => {
-        if (connectedDevice) {
-          disconnectFromDevice(connectedDevice.id);
-        }
-      }
-    }
-  }, [isBLEAvailable])*/
+    };
+  }, [isBLEAvailable]);
 
   useEffect(() => {
     if (connectedDevice && clearance === 1) {
@@ -155,10 +125,34 @@ const App = () => {
   }, [clearance, connectedDevice]);
 
   // Intercept the manual authentication to save the password
-  const savePassword = (pass: string) => {
-    console.log("[savePassword] I am saving the password!");
+  const handleManualAuth = (device: Device, pass: string) => {
     save("password", pass);
+
+    authenticateDevice(device, pass);
   }
+
+  useEffect(() => {
+    const attemptAutoAuth = async () => {
+      if (connectedDevice && clearance === 0 && !hasAttemptedAutoAuth) {
+        setHasAttemptedAutoAuth(true);
+
+        const savedPass = await getValueFor("password");
+
+        if (savedPass) {
+          console.log("[attemptAutoAuth] Auto-authenticating with saved password...");
+          authenticateDevice(connectedDevice, savedPass);
+        }
+      }
+    };
+
+    attemptAutoAuth();
+  }, [connectedDevice, clearance, hasAttemptedAutoAuth]);
+
+  useEffect(() => {
+    if (!connectedDevice) {
+      setHasAttemptedAutoAuth(false);
+    }
+  }, [connectedDevice]);
 
   /*const handleDeviceConnection = async () => {
     try {
@@ -218,9 +212,8 @@ const App = () => {
               <PasswordWidget
                 device={connectedDevice}
                 clearance={clearance}
-                authenticateDevice={authenticateDevice}
+                authenticateDevice={handleManualAuth}
                 changeDevicePassword={changeDevicePassword}
-                savePassword={savePassword}
               />
             )
             // STATE 3: CONNECTED AND CLEARED
@@ -237,9 +230,8 @@ const App = () => {
                     <PasswordWidget
                       device={connectedDevice}
                       clearance={clearance}
-                      authenticateDevice={authenticateDevice}
+                      authenticateDevice={handleManualAuth}
                       changeDevicePassword={changeDevicePassword}
-                      savePassword={savePassword}
                     />
                 </View>
               </>
