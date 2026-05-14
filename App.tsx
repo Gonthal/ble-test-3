@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, DO_NOT_USE_OR_YOU_WILL_BE_FIRED_EXPERIMENTAL_FORM_ACTIONS, DO_NOT_USE_OR_YOU_WILL_BE_FIRED_EXPERIMENTAL_REACT_NODES } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dimensions,
   Image,
@@ -17,11 +17,8 @@ import * as SecureStore from 'expo-secure-store';
 
 import DeviceModal from "./components/DeviceConnectionModal";
 import useBLE from "./hooks/useBLE";
-//import UserInput from "./components/UserInput";
 import userSecureStore from "./hooks/userSecureStore";
 import KeyboardAvoidingContainer from "./components/KeyboardAvoidingView";
-//import LottieView from "lottie-react-native";
-//import soundPlayer from "./hooks/soundPlayer";
 import LockControl from "./components/LockControl";
 import PasswordWidget from "./components/PasswordWidget";
 
@@ -40,21 +37,12 @@ const App = () => {
     connectToDevice,
     requestPermissions,
     scanForPeripherals,
-    scanForReconnection,
-    writePassword,
-    //retrieveDevice,
     disconnectFromDevice,
-    handleDisconnection,
     activateButton,
     authenticateDevice,
     changeDevicePassword,
     autoConnectToDevice,
-    isPairedRef,
-    isPaired,
-    pairedDeviceIDRef,
-    passwordRef,
     clearance,
-    pairedDeviceFound,
     isBLEAvailable,
     lockState
   } = useBLE();
@@ -88,8 +76,6 @@ const App = () => {
   const autoConnect = async () => {
     console.log("[main] I am in or som");
 
-    if (!isBLEAvailable) { return; }
-
     try {
       const savedId = await getValueFor("deviceID");
       const isPaired = await getValueFor("pairingStatus");
@@ -105,14 +91,10 @@ const App = () => {
   }
 
   useEffect(() => {
-    autoConnect();
-
-    return () => {
-      if (connectedDevice) {
-        disconnectFromDevice(connectedDevice.id);
-      }
-    };
-  }, [isBLEAvailable]);
+    if (isBLEAvailable && !connectedDevice) {
+      autoConnect();
+    }
+  }, [isBLEAvailable, connectedDevice]);
 
   useEffect(() => {
     if (connectedDevice && clearance === 1) {
@@ -154,43 +136,6 @@ const App = () => {
     }
   }, [connectedDevice]);
 
-  /*const handleDeviceConnection = async () => {
-    try {
-      await SecureStore.getItemAsync("pairingStatus")
-      .then(value => {
-        isPairedRef.current = value ?? 'false';
-        //console.log("[handleDeviceConnection] Are we paired? " + isPairedRef.current);
-      });
-
-      if (isPairedRef.current === 'true') {
-        if (connectedDevice === null) {
-          if (pairedDeviceFound === false) {
-            await retrieveDevice();
-            await scanForReconnection();
-          } else if (pairedDeviceFound === true) {
-            await connectToDevice(null, pairedDeviceIDRef.current);
-            //await writePassword(connectedDeviceRef.current, passwordRef.current);
-            handleDisconnection(pairedDeviceIDRef.current);
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`[main] error: ${error}`);
-    }
-  }
-
-  useEffect(() => {
-    (async () => {
-      if (isBLEAvailable) {
-        handleDeviceConnection();
-      }   
-      return () => {
-        if (connectedDevice) {
-          disconnectFromDevice(connectedDevice.id)
-        }
-      }
-    })();
-  }, [pairedDeviceFound, isBLEAvailable]);*/
   return (
     <KeyboardAvoidingContainer>
       <StatusBar backgroundColor={"#414141"} />
@@ -243,8 +188,9 @@ const App = () => {
             SecureStore.setItemAsync("deviceID", "none");
             SecureStore.setItemAsync("isPaired", "none");
             SecureStore.setItemAsync("password", "none");
+            alert("Pedal Lock device forgotten");
           }}>
-              <Text style={styles.regularButtonText}>Delete device</Text>
+              <Text style={styles.regularButtonText}>Forget device</Text>
           </TouchableOpacity>
         }
       <DeviceModal
@@ -257,44 +203,6 @@ const App = () => {
     </KeyboardAvoidingContainer>
   )
 }
-  /*return (
-    <KeyboardAvoidingContainer>
-      <StatusBar backgroundColor="#414141" />
-      <ImageBackground
-        style={styles.backgroundContainer}
-        resizeMode="cover"
-        source={BackgroundImage}
-      >
-          <View style={styles.container}>
-            {
-              connectedDevice ? (
-                <>
-                  <LockControl
-                    deviceRef={connectedDeviceRef}
-                    buttonImage={ActivateButton}
-                    lockState={lockState}
-                    activateButton={activateButton}
-                  />
-                </>
-              ) : (
-                <>
-                  <TouchableOpacity onPress={openModal} style={styles.regularButton}>
-                    <Text style={styles.regularButtonText}>Connect</Text>
-                  </TouchableOpacity>
-                </>
-              )
-            }
-          </View>   
-        <DeviceModal
-          closeModal={hideModal}
-          visible={isModalVisible}
-          connectToPeripheral={connectToDevice}
-          devices={allDevices}
-        />
-      </ImageBackground>
-    </KeyboardAvoidingContainer>
-    
-  )*/
 
 const styles = StyleSheet.create({
   container: {
@@ -311,13 +219,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#414141',
   },
-  mainTitleWrapper: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   regularButton: {
-    backgroundColor: "#C0C0C0", // Argentinian blue
+    backgroundColor: "#C0C0C0",
     justifyContent: "center",
     alignItems: "center",
     height: 60,
@@ -330,31 +233,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#F9F9F9", // Seasalt
-  },
-  activateButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: 150,
-    width: 150,
-    marginHorizontal: 100,
-    marginBottom: 10,
-    borderRadius: 100,
-  },
-  activaButtonImage: {
-    width: 150,
-    height: 150,
-  },
-  imageContainer: {
-    flex: 1,
-    paddingTop: 58,
-    paddingHorizontal: 20,
-  },
-  mainImage: {
-    width: 350,
-    height: 300,
-    borderRadius: 0,
-    resizeMode: 'contain',
-  },
+  }
 });
 
 export default App;

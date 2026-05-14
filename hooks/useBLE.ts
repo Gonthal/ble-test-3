@@ -9,8 +9,8 @@ import  base64  from "react-native-base64";
 import {
     BleError,
     BleManager,
-    Characteristic,
     Device,
+    BleErrorCode
 } from "react-native-ble-plx";
 
 //import userSecureStore from "./userSecureStore";
@@ -34,24 +34,13 @@ function useBLE() {
     const [allDevices, setAllDevices] = useState<Device[]>([]);
     const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
     const [clearance, setClearance] = useState<number>(0);
-    const [pairedDeviceFound, setPairedDeviceFound] = useState<boolean>(false);
-    const [isPaired, setIsPaired] = useState<boolean>(false);
     const [isBLEAvailable, setIsBLEAvailable] = useState<boolean>(false);
-    const [differentLockState, setDifferentLockState] = useState<boolean>(false);
     const [lockState, setLockState] = useState<number>(-1);
 
     let connectedDeviceRef = useRef<Device | null>(null);
-    let isPairedRef = useRef<string>('false');
-    let pairedDeviceIDRef = useRef<string>('');
-    let passwordRef = useRef<string>('');
-    let clearanceRef = useRef<number>(0);
-    let prevLockStateRef = useRef<number>(0);
-    let actualLockStateRef = useRef<number>(0);
     
 
     const [pairedDeviceID, setPairedDeviceID] = useState<string>('');
-
-    //const { save, getValueFor } = userSecureStore();
 
     const requestAndroid31Permissions = async () => {
         const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -116,7 +105,12 @@ function useBLE() {
             bleManager.stopDeviceScan();
             connectedDeviceRef.current = device;
             setConnectedDevice(device);
-            //saveDevice(device, "dummy_pwd");
+
+            bleManager.onDeviceDisconnected(device.id, (error, disconnectedDevice) => {
+                console.log("[useBLE, setupMonitor] Device physically disconnected!", error);
+                setConnectedDevice(null); // Clear the device
+                setClearance(0);          // Reset the clearance lock
+            })
 
             // Setup the monitor here
             console.log("[connecToDevice] Setting up notification monitor...");
@@ -125,6 +119,10 @@ function useBLE() {
                 LOCKSTATE_CHARACTERISTIC_UUID,
                 (error, characteristic) => {
                     if (error) {
+                        if (error.errorCode === BleErrorCode.DeviceDisconnected ||
+                            error.errorCode === BleErrorCode.OperationCancelled) {
+                                return; // Fail silently
+                            }
                         console.error("Monitor error:", error);
                         return;
                     }
@@ -144,7 +142,7 @@ function useBLE() {
                     .then(setupMonitor); // Use the helper
             } catch (e) {
                 console.log("[connectToDevice] FAILED TO CONNECT WITH ID", e);
-                setPairedDeviceFound(false);
+                //setPairedDeviceFound(false);
             }
         } else if (device) {
             try {
@@ -153,7 +151,7 @@ function useBLE() {
                     .then(setupMonitor);
             } catch (e) {
                 console.log("[connectToDevice] FAILED TO CONNECT WITH ID", e);
-                setPairedDeviceFound(false);
+                //setPairedDeviceFound(false);
             }
         }
     };
@@ -184,75 +182,6 @@ function useBLE() {
         });
     }
         
-
-    const scanForReconnection = () => 
-        bleManager.startDeviceScan(null, null, (error, device) => {
-            if (error) {
-                console.log('[scanForReconnection]', error);
-            }
-            console.log(`[scanForReconnection] ID current: ${pairedDeviceIDRef.current} | p. device found: ${pairedDeviceFound}`);
-            //alert(`[scanForReconnection] ID current: ${pairedDeviceIDRef.current} | p. device found: ${pairedDeviceFound}`)
-            if (device && device.id === pairedDeviceIDRef.current) {
-                //console.log(`[scanForReconnection] I'm in!`);
-                setPairedDeviceFound(true);
-                console.log(`[scanForReconnection] I'm in, p. device found: ${pairedDeviceFound}`);
-                //alert(`[scanForReconnection] I'm in, p. device found: ${pairedDeviceFound}`);
-                bleManager.stopDeviceScan();
-            }
-        });
-
-    const reconnectionListener = async (error: BleError | null, device: Device | null) => {
-        if (error) {
-            console.log('[scanForReconnection]', error);
-            //alert(`[scanForReconnection] ${error}`);
-        }
-        console.log(`[scanForReconnection] ID current: ${pairedDeviceIDRef.current} | p. device found: ${pairedDeviceFound}`);
-        //alert(`[scanForReconnection] ID current: ${pairedDeviceIDRef.current} | p. device found: ${pairedDeviceFound}`);
-        if (device && device.id == pairedDeviceIDRef.current) {
-            setPairedDeviceFound(true);
-            console.log(`[scanForReconnection] I'm in, p. device found: ${pairedDeviceFound}`);
-            //alert(`[scanForReconnection] I'm in, p. device found: ${pairedDeviceFound}`);
-            bleManager.stopDeviceScan();
-        }
-    }
-
-    const readClearanceCharacteristic = async (device: Device, password: string) => {
-        if (device) {
-            await device
-                .readCharacteristicForService(DATA_SERVICE_UUID, CLEARANCE_CHARACTERISTIC_UUID)
-                .then(characteristic => {
-                    clearanceRef.current = base64.decode(characteristic.value ?? '').charCodeAt(0);
-                    setClearance(clearanceRef.current);
-                    console.log("[readClearanceCharacteristic] clearanceRef is:", clearanceRef.current);
-                    console.log('[readClearanceCharacteristic] clearance type is:', typeof(clearanceRef.current));
-
-                    //saveDevice(device, password);
-                    
-                })
-                .catch(error => {
-                    console.error('[readClearanceCharacteristic] Read characteristic error: ', error);
-                })
-        }
-    }
-
-    const writePassword = async (device: Device, password: string) => {
-        if (device) {
-            //clearanceRef.current = 1;
-            //setClearance(1);
-            //saveDevice(device, "dummy_pwd");
-            /*await device.
-                writeCharacteristicWithResponseForService(
-                    DATA_SERVICE_UUID,
-                    PASSWORD_CHARACTERISTIC_UUID,
-                    base64.encode(password));
-                console.log("[writePassword] Write successful");
-                readClearanceCharacteristic(device, password);*/
-            
-        } else {
-            console.log("[writePassword] no device connected");
-        }
-    }
-
     const activateButton = async (device: Device) => {
         //console.log("[activateButton] device:", device);
         if (device) {
@@ -287,130 +216,10 @@ function useBLE() {
         }
     }
 
-    async function queryLockState(device: Device): Promise<boolean | number> {
-        let decodedValue = 0;
-        if (device) {
-            await device.readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
-                .then(characteristic => {
-                    decodedValue = base64.decode(characteristic.value ?? '').charCodeAt(0);
-                })
-        }
-        return new Promise((resolve) => {
-            resolve(decodedValue);
-        });
-    };
-    /*const queryLockState = async (device: Device) => {
-        if (device) {
-            try {
-                device.monitorCharacteristicForService(
-                    DATA_SERVICE_UUID,
-                    LOCKSTATE_CHARACTERISTIC_UUID,
-                    (error, LOCKSTATE_CHARACTERISTIC_UUID) => {
-                        if (error) {
-                            alert("[queryLockState] The error is" + error);
-                        } else {
-                            setDifferentLockState(true)
-                        }
-                    }
-                )
-            }
-        }
-    }*/
-
-    const checkLockCharacteristic = async (device: Device, prevFlag: boolean) => {
-        if (device) {
-            await device.readCharacteristicForService(DATA_SERVICE_UUID, LOCKSTATE_CHARACTERISTIC_UUID)
-                .then(characteristic => {
-                    if (prevFlag === true) {
-                        prevLockStateRef.current = base64.decode(characteristic.value ?? '').charCodeAt(0);
-                    } else {
-                        actualLockStateRef.current = base64.decode(characteristic.value ?? '').charCodeAt(0);
-                    }
-                });
-            //console.log(`[checkLockCharacteristic] previous: ${prevLockStateRef.current} actual: ${actualLockStateRef.current} and different: ${differentLockState}`);
-        }
-    }
-
-    /*const saveDevice = async (device: Device, password: string) => {
-        if (clearanceRef.current) {
-            console.log('[saveDevice] Saving device...');
-            isPairedRef.current = 'true';
-            setIsPaired(true);
-            await save("deviceID", device.id);
-            await save("password", password);
-            await save("pairingStatus", isPairedRef.current);
-            console.log('[saveDevice] Device has been saved.');
-            //console.log(getValueFor("deviceID"));
-            //console.log(getValueFor("password"));
-            //console.log(getValueFor("pairingStatus"));
-        } else {
-            console.error('[saveDevice] Clearance is needed.');
-        }
-    }*/
-
-    /*const deleteDevice = async () => {
-        //await bleManager.cancelDeviceConnection(pairedDeviceIDRef.current);
-        await SecureStore.deleteItemAsync("deviceID");
-        await SecureStore.deleteItemAsync("password");
-        await SecureStore.deleteItemAsync("pairingStatus");
-        isPairedRef.current = 'false';
-        setIsPaired(false);
-        pairedDeviceIDRef.current = '';
-        passwordRef.current = '';
-        console.log(`[deleteDevice]
-            ${SecureStore.getItemAsync("deviceID")},
-            ${SecureStore.getItemAsync("password")},
-            ${SecureStore.getItemAsync("pairingStatus")}.`
-        );
-    }*/
-
-    /*const retrieveDevice = async () => {
-        //scanForPeripherals();
-        //alert('[retrieveDevice]');
-
-        try {
-            await SecureStore.getItemAsync("deviceID")
-            .then(value => {
-                //console.log('[retrieveDevice, get ID] id:', value);
-                pairedDeviceIDRef.current = value ?? 'nullID';
-            });
-            
-            await SecureStore.getItemAsync("password")
-            .then(value => {
-                //console.log('[retrieveDevice, get password] password is:', value);
-                passwordRef.current = value ?? 'nullPassword';
-            });
-            //console.log('[retrieveDevice] password ref:', passwordRef.current);
-
-            console.log(`[retrieveDevice] Ref ID: ${pairedDeviceIDRef.current} and Ref password: ${passwordRef.current}`);
-            //alert(`[retrieveDevice] Ref ID: ${pairedDeviceIDRef.current} and Ref password: ${passwordRef.current}`);
-        } catch (error) {
-            console.log(`[retrieveDevice] error: ${error}`);
-            //alert(`[retrieveDevice] error: ${error}.`);
-        }
-    }*/
-
     const disconnectFromDevice = async (id: string) => {
         await bleManager.cancelDeviceConnection(id);
         setConnectedDevice(null);
         console.log('[disconnectFromDevice] device connection status:', await bleManager.isDeviceConnected(id));
-    }
-
-    const handleDisconnection = async (id: string) => {
-        console.log('[handleDisconnection]');
-        bleManager.onDeviceDisconnected(id, disconnectedListener);
-    }
-
-    const disconnectedListener = (error: BleError | null, device: Device | null) => {
-        if (error) {
-            console.error('[disconnectedListener] error:', error);
-            setConnectedDevice(null);
-            setPairedDeviceFound(false);
-        } else if (device) {
-            console.log('[disconnectedListener] device:', device);
-            setConnectedDevice(null);
-            setPairedDeviceFound(false);
-        }
     }
 
     const checkBLEState = async () => {
@@ -440,6 +249,10 @@ function useBLE() {
                 CLEARANCE_CHARACTERISTIC_UUID,
                 (error, characteristic) => {
                     if (error) {
+                        if (error.errorCode === BleErrorCode.DeviceDisconnected ||
+                            error.errorCode === BleErrorCode.OperationCancelled) {
+                                return; // Fail silently
+                            }
                         console.error("Clearance error:", error);
                         return;
                     }
@@ -488,8 +301,9 @@ function useBLE() {
     }, [bleManager]);
 
     const autoConnectToDevice = (savedId: string, savedPassword: string) => {
-        console.log("[autoConnectToDevice] Searching for saved device in background...");
+        bleManager.stopDeviceScan();
 
+        console.log("[autoConnectToDevice] Searching for saved device in background...");
         bleManager.startDeviceScan(null, null, async (error, device) => {
             if (error) {
                 console.log("[autoConnectToDevice] Scan error:", error);
@@ -517,30 +331,14 @@ function useBLE() {
         connectedDeviceRef,
         requestPermissions,
         scanForPeripherals,
-        scanForReconnection,
-        readClearanceCharacteristic,
-        writePassword,
         activateButton,
-        queryLockState,
-        //saveDevice,
-        //deleteDevice,
-        //retrieveDevice,
         disconnectFromDevice,
-        handleDisconnection,
         authenticateDevice,
         changeDevicePassword,
         autoConnectToDevice,
         pairedDeviceID,
-        isPairedRef,
-        isPaired,
-        pairedDeviceIDRef,
-        passwordRef,
-        clearanceRef,
         clearance,
-        pairedDeviceFound,
         isBLEAvailable,
-        differentLockState,
-        setDifferentLockState,
         lockState,
     };
 }
