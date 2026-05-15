@@ -11,7 +11,7 @@ function userSecureStore() {
         if (result) {
             return result;
         } else {
-            alert("There is no such value");
+            ;//alert("There is no such value");
         }
     }
 

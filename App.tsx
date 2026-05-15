@@ -136,6 +136,19 @@ const App = () => {
     }
   }, [connectedDevice]);
 
+  const handleForgetDevice = async () => {
+    console.log("Forgetting device and wiping memory...");
+
+    // Physically delete the keys so getValueFor returns null 
+    await SecureStore.deleteItemAsync("deviceID");
+    await SecureStore.deleteItemAsync("pairingStatus");
+    await SecureStore.deleteItemAsync("password");
+
+    if (connectedDevice) {
+      disconnectFromDevice(connectedDevice.id);
+    }
+  }
+
   return (
     <KeyboardAvoidingContainer>
       <StatusBar backgroundColor={"#414141"} />
@@ -178,21 +191,14 @@ const App = () => {
                       authenticateDevice={handleManualAuth}
                       changeDevicePassword={changeDevicePassword}
                     />
+                    <TouchableOpacity style={styles.regularButton} onPress={handleForgetDevice}>
+                        <Text style={styles.regularButtonText}>Forget device</Text>
+                    </TouchableOpacity>
                 </View>
               </>
             )
           }
         </View>
-        {
-          <TouchableOpacity style={styles.regularButton} onPress={() => {
-            SecureStore.setItemAsync("deviceID", "none");
-            SecureStore.setItemAsync("isPaired", "none");
-            SecureStore.setItemAsync("password", "none");
-            alert("Pedal Lock device forgotten");
-          }}>
-              <Text style={styles.regularButtonText}>Forget device</Text>
-          </TouchableOpacity>
-        }
       <DeviceModal
         closeModal={hideModal}
         visible={isModalVisible}
@@ -207,7 +213,8 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingVertical: dimensions.height / 3,
+    paddingTop: dimensions.height / 3.0,
+    paddingBottom: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },

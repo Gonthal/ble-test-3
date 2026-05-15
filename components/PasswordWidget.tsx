@@ -23,7 +23,7 @@ export default function PasswordWidget({
     const handleAuth = () => {
         if (device && inputValue.length == 6) {
             authenticateDevice(device, inputValue);
-            setInputValue('Enter a 6-digit password'); // Clear input after sending
+            setInputValue(''); // Clear input after sending
         } else {
             alert("Password must be exactly 6 characters.");
         }
@@ -34,7 +34,7 @@ export default function PasswordWidget({
             const success = await changeDevicePassword(device, inputValue);
             if (success) {
                 alert("Password updated successfully!");
-                setInputValue('Enter a 6-digit password');
+                setInputValue('');
             }
         }
     };
@@ -42,7 +42,7 @@ export default function PasswordWidget({
     return (
         <View style={styles.container}>
             <Text style={styles.statusText}>
-                {clearance === 1 ? "You can operate the Pedal Lock" : "Locked"}
+                {clearance === 1 ? "You can operate the Pedal Lock" : "Password needed"}
             </Text>
 
             <TextInput
