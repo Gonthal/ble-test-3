@@ -109,7 +109,6 @@ function useBLE() {
                     // Force the Android OS to accept a fast connection interval
                     // Then, expand the packet size to prevent GATT bottlenecks
                     await device.requestConnectionPriority(ConnectionPriority.High);
-                    await device.requestMTU(512);
                 } catch (error) {
                     console.log("[Android] Negotiating warning:", error);
                     alert("[Android] Negotiating warning:" + error);
