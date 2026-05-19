@@ -112,6 +112,7 @@ function useBLE() {
                     await device.requestMTU(512);
                 } catch (error) {
                     console.log("[Android] Negotiating warning:", error);
+                    alert("[Android] Negotiating warning:" + error);
                 }
             }
 
