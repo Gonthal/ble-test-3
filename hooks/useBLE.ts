@@ -10,7 +10,8 @@ import {
     BleError,
     BleManager,
     Device,
-    BleErrorCode
+    BleErrorCode,
+    ConnectionPriority
 } from "react-native-ble-plx";
 
 //import userSecureStore from "./userSecureStore";
@@ -101,6 +102,19 @@ function useBLE() {
     const connectToDevice = async (device: Device | null, id: string | null) => {
         // Helper function to setup monitor
         const setupMonitor = async (device: Device) => {
+            // ANDROID patch
+            if (Platform.OS === "android") {
+                try {
+                    console.log("[Android] Negotiating connection priority and MTU...");
+                    // Force the Android OS to accept a fast connection interval
+                    // Then, expand the packet size to prevent GATT bottlenecks
+                    await device.requestConnectionPriority(ConnectionPriority.High);
+                    await device.requestMTU(512);
+                } catch (error) {
+                    console.log("[Android] Negotiating warning:", error);
+                }
+            }
+
             await device.discoverAllServicesAndCharacteristics();
             bleManager.stopDeviceScan();
             connectedDeviceRef.current = device;
