@@ -182,8 +182,8 @@ function useBLE() {
             }
 
             if (
-                device //&&
-                //(device.localName === "LOCK" || device.name === "LOCK")
+                device &&
+                (device.localName === "PEDAL LOCK" || device.name === "PEDAL LOCK")
             ) {
                 setAllDevices((prevState: Device[]) => {
                     if (!isDuplicateDevice(prevState, device)) {

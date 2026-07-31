@@ -64,7 +64,7 @@ const HomeScreen = ({ navigation }: any) => {
           {
             !connectedDevice ? (
               <TouchableOpacity onPress={openModal} style={styles.regularButton}>
-                <Text style={styles.regularButtonText}>Connect to Pedal</Text>
+                <Text style={styles.regularButtonText}>Connect</Text>
               </TouchableOpacity>
             )
             : clearance === 0 ? (
