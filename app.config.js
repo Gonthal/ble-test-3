@@ -1,12 +1,11 @@
 const withFmtFix = require('./withFmtFix.js');
 
 module.exports = ({ config }) => {
-  // Return the config wrapped with your custom plugin
   return withFmtFix({
     ...config,
-    name: "ble-test-3",
+    name: "DeFalken Pedal Lock",
     slug: "ble-test-3",
-    version: "1.0.0",
+    version: "1.0.10",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -17,27 +16,62 @@ module.exports = ({ config }) => {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.yourname.bletest3" // Make sure this is correct
+      bundleIdentifier: "com.gonthal.bletest3",
+      config: {
+        usesNonExemptEncryption: false
+      },
+      infoPlist: {
+        CFBundleDisplayName: "DeFalken Pedal Lock"
+      }
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      package: "com.yourname.bletest3" // Make sure this is correct
+      permissions: [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      package: "com.gonthal.bletest3"
     },
     web: {
       favicon: "./assets/favicon.png"
     },
     plugins: [
       [
-        "expo-build-properties",
+        "react-native-ble-plx",
         {
-          "ios": {
-            "useFrameworks": "static"
-          }
+          isBackgroundEnabled: true,
+          modes: [
+            "peripheral",
+            "central"
+          ],
+          bluetoothAlwaysPermission: "Turning on Bluetooth services allows the app to detect and connect to Pedal Lock devices."
         }
-      ]
-    ]
+      ],
+      [
+        "expo-secure-store",
+        {
+          faceIDPermission: "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
+        }
+      ],
+      "expo-audio",
+      "expo-build-properties"
+    ],
+    extra: {
+      eas: {
+        projectId: "3a6e9d1e-9eff-47c0-b8da-0f51d1679b51"
+      }
+    },
+    runtimeVersion: {
+      policy: "appVersion"
+    },
+    updates: {
+      url: "https://u.expo.dev/3a6e9d1e-9eff-47c0-b8da-0f51d1679b51"
+    }
   });
 };
