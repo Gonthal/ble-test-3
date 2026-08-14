@@ -35,5 +35,9 @@ const styles = StyleSheet.create({
         paddingVertical: 120,
         overflow: 'hidden',
         flex: 1,
+        position: 'absolute',
+        top: -120,
+        alignSelf: 'center',
+        zIndex: 10,
     }
 });
