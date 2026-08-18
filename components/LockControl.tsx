@@ -10,7 +10,7 @@ interface LockControlProps {
     deviceRef: React.MutableRefObject<Device | null>,
     buttonImage: any,
     lockState: number,
-    activateButton: (device: Device) => Promise<void>
+    activateButton: (device: Device | null) => Promise<void>
     // ... other props if needed
 }
 
@@ -35,6 +35,25 @@ export default function LockControl({
         setShowGear(true);
         setTimeout(() => setShowGear(false), 4000);
     };
+
+    // Create a reference to hold the active timer
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    // Start firing the signal the moment the user touches the screen
+    const handlePressIn = async () => {
+        // Fire immediately on the first touch
+        activateButton(deviceRef.current);
+        // Then set up a loop to keep firing every 150ms
+        timerRef.current = setInterval(() => {
+            activateButton(deviceRef.current);
+        }, 250);
+    };
+
+    const handlePressOut = async () => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    }
 
     // Send BLE command to open or close the lock
     const sendLockCommand = async () => {
@@ -73,7 +92,9 @@ export default function LockControl({
                 />
             )}
             <TouchableOpacity
-                onPress={sendLockCommand}
+                //onPress={sendLockCommand}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
                 style={styles.activateButton}
             >
                 <Image source={buttonImage} style={styles.activateButtonImage}/>
