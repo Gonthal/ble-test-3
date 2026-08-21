@@ -45,7 +45,7 @@ export default function LockControl({
         // Then set up a loop to keep firing every 150ms
         timerRef.current = setInterval(() => {
             activateButton(deviceRef.current);
-        }, 250);
+        }, 150);
     };
 
     const handlePressOut = async () => {
@@ -91,6 +91,7 @@ export default function LockControl({
                     visibility={showGear}
                 />
             )}
+            <Text style={styles.regularButtonText}>The lock is {lockState}</Text>
             <TouchableOpacity
                 //onPress={sendLockCommand}
                 onPressIn={handlePressIn}
