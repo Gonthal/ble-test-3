@@ -91,7 +91,6 @@ export default function LockControl({
                     visibility={showGear}
                 />
             )}
-            <Text style={styles.regularButtonText}>The lock is {lockState}</Text>
             <TouchableOpacity
                 //onPress={sendLockCommand}
                 onPressIn={handlePressIn}
