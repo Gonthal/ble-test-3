@@ -67,6 +67,7 @@ export default function LockControl({
     useEffect(() => {
         // Ignore initial state or invalid states
         if (lockState === -1) return;
+        if (prevLockStateRef.current === -1) return;
 
         // Only run is the state actually changed
         if (lockState !== prevLockStateRef.current) {
