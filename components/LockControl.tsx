@@ -67,11 +67,17 @@ export default function LockControl({
     useEffect(() => {
         // Ignore initial state or invalid states
         if (lockState === -1) return;
-        if (prevLockStateRef.current === -1) return;
+
+        if (prevLockStateRef.current === null) {
+            prevLockStateRef.current = lockState;
+            return;
+        }
 
         // Only run is the state actually changed
         if (lockState !== prevLockStateRef.current) {
             console.log('[LockControl] State changed to:', lockState);
+
+            prevLockStateRef.current = lockState;
 
             // Play effects
             playAnimation();
