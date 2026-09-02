@@ -5,7 +5,7 @@ module.exports = ({ config }) => {
     ...config,
     name: "DeFalken Pedal Lock",
     slug: "ble-test-3",
-    version: "1.0.11",
+    version: "1.0.10",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",

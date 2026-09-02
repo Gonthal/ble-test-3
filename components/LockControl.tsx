@@ -31,6 +31,16 @@ export default function LockControl({
     const gearRef = useRef<LottieView>(null);
     const gearAnimation = require('../assets/simple-gear.json');
 
+    const isSyncingRef = useRef<boolean>(true);
+    const userInitiatedRef = useRef<boolean>(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            isSyncingRef.current = false;
+        }, 2500);
+        return () => clearTimeout(timer);
+    }, []);
+
     const playAnimation = () => {
         setShowGear(true);
         setTimeout(() => setShowGear(false), 4000);
@@ -40,6 +50,10 @@ export default function LockControl({
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     // Start firing the signal the moment the user touches the screen
     const handlePressIn = async () => {
+        // User touched the button, so instantly allow animations
+        userInitiatedRef.current = true;
+        isSyncingRef.current = false;
+
         // Fire immediately on the first touch
         activateButton(deviceRef.current);
         // Then set up a loop to keep firing every 150ms
@@ -65,7 +79,28 @@ export default function LockControl({
 
     // Play animation and sound based on whether the lock changed its state 
     useEffect(() => {
-        // Ignore initial state or invalid states
+        if (lockState === -1) return;
+
+        const isFirstRead = prevLockStateRef.current === null;
+        const isStateChange = lockState !== prevLockStateRef.current;
+
+        if (!isFirstRead && !isStateChange) return;
+
+        console.log('[LockControl] State update: ${lockState} (First read: ${isFirstRead})');
+        prevLockStateRef.current = lockState;
+
+        if (isSyncingRef.current && !userInitiatedRef.current) {
+            return;
+        }
+
+        playAnimation();
+        try {
+            player.seekTo(0).then(() => player.play());
+        } catch (error) {
+            console.log('[LockControl] Sound error:', error);
+        }
+        
+        /*// Ignore initial state or invalid states
         if (lockState === -1) return;
 
         if (prevLockStateRef.current === null) {
@@ -76,9 +111,18 @@ export default function LockControl({
         // Only run is the state actually changed
         if (lockState !== prevLockStateRef.current) {
             console.log('[LockControl] State changed to:', lockState);
-
             prevLockStateRef.current = lockState;
 
+            // Only animate if the sync window finished OR the user pressed the button
+            if (!isSyncingRef.current || userInitiatedRef.current) {
+                // Play effects
+                playAnimation();
+                try {
+                    player.seekTo(0).then(() => player.play());
+                } catch (error) {
+                    console.log('[LockControl] Sound error:', error);
+                }
+            }
             // Play effects
             playAnimation();
             try {
@@ -86,7 +130,7 @@ export default function LockControl({
             } catch (error) {
                 console.log('[LockControl] Sound error:', error);
             }
-        }
+        }*/
     }, [lockState]);
 
     return (
